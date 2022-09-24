@@ -44,7 +44,7 @@ function liveUpdate(){
   })
     .then(res => res.json())
     .then(res => {
-      document.getElementById("current-prompt").innerHTML = res.data[0][0].currentPrompt;
+      /* document.getElementById("current-prompt").innerHTML = res.data[0][0].currentPrompt; */
       document.getElementById("bgText").innerHTML = res.data[0][0].currentPrompt;
     });
   setTimeout(liveUpdate, 5000)

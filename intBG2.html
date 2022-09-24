@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    
+    <head>
+
+        <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="style.css">
+
+        <script type="text/javascript" src="https://rawgit.com/patriciogonzalezvivo/glslCanvas/master/dist/GlslCanvas.js"></script>
+
+    </head>
+
+    <body>
+      <div id="bgShader-wrapper">
+        <canvas id="bgShader" class="glslCanvas" data-fragment="" 
+        width="500" height="100%"></canvas>
+      </div>
+      <div id="bgText"></div>
+      <div id="overlay-wrapper">
+        <div id="current-prompt-wrapper" class="Collider">
+          <span id="current-prompt"></span>
+        </div>
+      </div>
+      <!-- <script src="responseDisplayGen.js"></script> -->
+      <script>
+        let spwShader = `
+          #define PI 3.14159265359
+          precision highp float;
+          uniform vec2 u_resolution;
+          uniform float u_time;
+          const int steps = 40;
+          vec3 lcol = vec3(0.459,0.314,0.91);
+          vec3 rcol = vec3(0.384,0.18,0.298);
+          vec3 ycol = vec3(0.459,0.373,0.612);
+
+          vec2 lissajous(float t, float a, float b, float d)
+            {return vec2(
+              sin(a * t + d) * cos(t + d),
+              cos(b * t)     * sin(t + d)
+            );}
+
+          mat2 rotate2d(float _angle){
+            return mat2(cos(_angle),-sin(_angle),
+                        sin(_angle),cos(_angle));
+          }
+
+          void main(){
+            float timer = 1. + (u_time*.001);
+            vec2 st = (gl_FragCoord.xy / u_resolution) - 0.5;
+            st = rotate2d( timer*1. ) * st;
+            float a = 2. + (timer*3.) * timer;
+            float b = 3. + (timer*4.) * timer;
+            float d = timer;	// phase
+            float m = 1.0;
+            float period = (PI*2.0)*timer;
+            vec2 lp = lissajous(timer, a, b, d)*0.8;
+            for(int i = 1; i <= steps; i++) {
+              float t = float(i)*period / float(steps);
+              t += timer;
+              vec2 p = lissajous(t, a, b, d)*0.8;        
+              vec2 pa = st - p;
+              vec2 ba = lp - p;
+              float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+              vec2 q = pa - ba*h;
+              m = min( m, dot( q, q ) );    
+              lp = p+(0.4*timer*timer);
+            }
+            m = sqrt( m );
+            float m1 = smoothstep(0.08, 0.008, m);
+            float m2 = smoothstep(0.1, 0.006, m);
+            vec3 col1 = mix(vec3(0.0),rcol,m1);
+            vec3 col2 = mix(vec3(0.0),ycol,m2);
+            vec3 colov = 1. - (1. - col1) * (1. - col2);
+            gl_FragColor = vec4 (mix(lcol,colov,colov), 1.0);      
+          }`;
+          document.getElementById("bgShader").setAttribute("data-fragment", spwShader);
+      </script>
+      
+    </body>
+
+</html>

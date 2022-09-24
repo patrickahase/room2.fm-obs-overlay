@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    
+    <head>
+
+        <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="style.css">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js" integrity="sha512-rCZdHNB0AePry6kAnKAVFMRfWPmUXSo+/vlGtrOUvhsxD0Punm/xWbEh+8vppPIOzKB9xnk42yCRZ5MD/jvvjQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/addons/p5.sound.min.js" integrity="sha512-WzkwpdWEMAY/W8WvP9KS2/VI6zkgejR4/KTxTl4qHx0utqeyVE0JY+S1DlMuxDChC7x0oXtk/ESji6a0lP/Tdg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+        <script type="text/javascript" src="https://rawgit.com/patriciogonzalezvivo/glslCanvas/master/dist/GlslCanvas.js"></script>
+
+    </head>
+
+    <body>
+      <div id="bgShader-wrapper">
+        <canvas id="bgShader" class="glslCanvas" data-fragment="" 
+        width="500" height="100%"></canvas>
+      </div>
+      <div id="bgText"></div>
+      <div id="overlay-wrapper">
+        <div id="current-prompt-wrapper" class="Collider">
+          <span id="current-prompt"></span>
+        </div>
+      </div>
+      <script src="audioAnalysis.js"></script>
+      <script>
+        let spwShader = `
+          #define pi 3.14159265359
+          #define twopi 6.28318530718
+          precision highp float;
+          uniform vec2 u_resolution;
+          uniform float u_time;
+          const vec3 rcol = vec3(0.498,0.498,0.475);
+          const vec3 lcol = vec3(0.267,0.222,0.502);
+          const vec3 ycol = vec3(0.808,0.863,0.773);
+
+          mat2 rotate2d(float _angle){
+            return mat2(cos(_angle),-sin(_angle),
+                        sin(_angle),cos(_angle));
+          }
+          float polygon(vec2 p, float s, float stimer)
+          {
+              p *= rotate2d(stimer);
+              float a = ceil(s*(atan(-p.y, -p.x)/pi+1.)*.5);
+              float n = 2.*pi/s;
+              float t = n*a-n*.5;
+              return mix(dot(p, vec2(cos(t), sin(t))), length(p), .3);
+          }
+          vec2 hash12(vec2 p){
+            return vec2(fract(sin(dot(p, vec2(92.51, 65.19)))*9219.32),
+                      fract(sin(dot(p, vec2(23.34, 15.28)))*6485.32));
+          }
+
+
+          void main() {
+            vec2 st = gl_FragCoord.xy/u_resolution.xy- vec2(.5,.5);
+            st *= 6.;
+
+            vec2 i_st = floor(st);
+            vec2 f_st = fract(st);
+
+            float minDist = .6;
+            float minDist2 = .6;
+            float stimer = u_time *.2;
+
+            for (int y= -1; y <= 1; y++) {
+                for (int x= -1; x <= 1; x++) {
+                    vec2 neighbor = vec2(float(x),float(y));
+
+                    vec2 point = hash12(i_st + neighbor);
+
+                    point = 0.5 + 0.5*sin(stimer + 6.2831*point);
+
+                    vec2 diff = neighbor + point - f_st;
+
+                    float dist = polygon(neighbor+point - f_st, 3., stimer);
+                    float dist2 = polygon(neighbor+point - f_st, 5., stimer);
+
+                    minDist = min(minDist, dist*(sin(stimer)+1.)*.5);
+                    minDist2 = min(minDist2, dist2);
+                }
+            }
+            vec3 comp = mix(lcol, rcol, minDist);
+            comp = mix(ycol, comp, minDist2);
+            gl_FragColor = vec4(comp, 1.0);
+          }`;
+          document.getElementById("bgShader").setAttribute("data-fragment", spwShader);
+      </script>
+      
+    </body>
+
+</html>
